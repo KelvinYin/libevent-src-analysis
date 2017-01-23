@@ -1,14 +1,34 @@
+<span id="toc"></span>
+
 [TOC]
 
 # libevent源码分析
 
-## 1.开篇
+## 0.前言 
+[回目录](#toc)
 
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38300779)
+作者博客地址：http://blog.csdn.net/luotuo44
+电子书制作：Kelvin Yin (yinkangxi#gmail.com)
+
+在学习libevent源代码的时候，从网上找到了luotuo44写的《libevent源码分析》系列博客，觉得写得很好，和我写文档的风格一致。我之前在学习Linux内核代码的时候，写过一些文章，风格大致如此。先分析数据结构，再画图分析流程和函数调用关系，然后分小节解析源代码。
+
+我用了三天左右的时间把作者的libevent源码分析专栏的相关博客文章看完，觉得很过瘾，收获很大。只是觉得在网上看文章没有看电子书方便，而作者本人无意去做电子书，我便自己动手整理了现在的这个文档。
+
+本文档的内容都是luotuo44所写，我只是个文字的搬运工，将文中网页链接改成文档内链接，修改部分连接词，有错别字的话也一并改了。
+
+因为写过类似的文章，所以知道luotuo44写作的不易，请大家尊重原创者的劳动，在转发和引用的时候，将作者（luotuo44）的博客地址写上。
+
+谢谢！
+
+文档使用Markdown写成，Markdown编辑器使用的是MarkdownPad 2和[马克飞象](https://maxiang.io/)， 最后使用[马克飞象](https://maxiang.io/)转成PDF文档。为了更好的使用马克飞象，我还花了79块钱买了一年专业版。
+
+<span id="open"></span>
+## 1.开篇
+[回目录](#toc) [原文地址](http://blog.csdn.net/luotuo44/article/details/38300779)
 
 我所分析的Libevent版本是2.0.21版本，是目前最新的稳定版本。看这系列博文中，需要读者有Linux编程的一些基础。因为像POSIX、文件描述符、多线程等等这些概念，我并不会去解释，我默认读者已经熟悉这些概念了。如果读者读过《UNIX环境高级编程》，那就完全没问题了。
 
-因为Libevent是跨平台的，所以它使用了很多它自己定义的通用跨平台类型，比如evutil\_socket_t。此外，Libevent也定义了一些跨平台通用的API，这些都可以在[《通用类型和函数》](http://blog.csdn.net/luotuo44/article/details/38780157)一文中找到。
+因为Libevent是跨平台的，所以它使用了很多它自己定义的通用跨平台类型，比如evutil_socket_t。此外，Libevent也定义了一些跨平台通用的API，这些都可以在[《通用类型和函数》](#common-type-and-function)一文中找到。
 
 相信来看本系列的文章的读者，都不会是刚刚接触Libevent的用户。这里就不说Libevent的优点和怎么安装使用Libevent了。我是想介绍其他东西。
 
@@ -46,7 +66,7 @@
 
 ![function call diagram](http://img.blog.csdn.net/20140918154259861?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbHVvdHVvNDQ=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 
-图中，上面的是event\_free函数会调用哪些函数，一颗主调用树。下面的是哪些函数会调用event\_free函数，是被调用关系。其中test\_event\_pending这些是Libevent提供的测试例子的测试函数。
+图中，上面的是event_free函数会调用哪些函数，一颗主调用树。下面的是哪些函数会调用event_free函数，是被调用关系。其中test_event_pending这些是Libevent提供的测试例子的测试函数。
 
 下面再给另外一个被调用关系的图：
 
@@ -54,9 +74,9 @@
 
 有一个不足之处，这个网站并没有和Libevent同步更新，目前提供的最高Libevent版本是2.0.3-alpha。
 
+<span id="event-config"></span>
 ## 2.event-config.h指明所在系统的环境
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38300965)
+[回目录](#toc) [原文地址](http://blog.csdn.net/luotuo44/article/details/38300965)
 
 如果你打开Libevent的一些文件，比如util.h文件。就会发现使用了很多宏定义，并根据一些宏定义而进行条件编译。这些宏定义往往来自event-config.h文件中。
 
@@ -129,9 +149,9 @@ event-config.h文件是一个很基础和重要的文件。在文件的一开始
 
 那么，在event-config.h文件将定义DISABLE_THREAD_SUPPORT这个宏，此时得到的Libevent是不支持多线程的。
 
+<span id="log-and-error"></span>
 ## 3.日志和错误处理
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38317797)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38317797)
 
 ### 日志处理
 
@@ -317,7 +337,7 @@ void event_msgx(const char *fmt, ...) EV_CHECK_FMT(1,2);
 void _event_debugx(const char *fmt, ...) EV_CHECK_FMT(1,2);
 ```
 
-#### 错误处理
+### 错误处理
 
 Libevent库运行的时候有可能会致命发生错误，此时，Libevent的默认行为是终止程序。同日志处理一样，用户也是可以用Libevent定制自己的错误处理函数。错误处理函数的格式和定制函数如下：
 
@@ -333,14 +353,13 @@ void event_set_fatal_callback(event_fatal_cb cb);
 
 如果要定制自己的日志处理函数和错误处理函数，那么应该在程序的一开始位置就进行定制。
 
-
+<span id="mem-allocation"></span>
 ## 4.内存分配
+[回目录](#toc)  [原文地址]( http://blog.csdn.net/luotuo44/article/details/38334979)
 
-[原文地址]( http://blog.csdn.net/luotuo44/article/details/38334979)
+Libevent的内存分配函数还是比较简单的，并没有定义内存池之类的东西。如同[上面小节中](#event-config)那样，给予Libevent库的使用者充分的设置权(定制)，即可以设置用户(Libevent库的使用者)自己的内存分配函数。至于怎么分配，主动权在于用户。但在设置(定制)的时候要注意一些地方，下面会说到。
 
-Libevent的内存分配函数还是比较简单的，并没有定义内存池之类的东西。如同[前一篇博客](http://blog.csdn.net/luotuo44/article/details/38317797)那样，给予Libevent库的使用者充分的设置权(定制)，即可以设置用户(Libevent库的使用者)自己的内存分配函数。至于怎么分配，主动权在于用户。但在设置(定制)的时候要注意一些地方，下面会说到。
-
-首先，如果要定制自己的内存分配函数，就得在一开始配置编译Libevent库是，不能加入--disable-malloc-replacement选项。默认情况下，是没有这个选项的。如果加入了这个选项，那么将会在生成的event-config.h中，定义_EVENT_DISABLE_MM_REPLACEMENT这个宏。关于event-config.h文件，可以参考[博文](http://blog.csdn.net/luotuo44/article/details/38300965)。下面是Libevent内存分配函数的声明(在mm-internal.h文件)：
+首先，如果要定制自己的内存分配函数，就得在一开始配置编译Libevent库是，不能加入--disable-malloc-replacement选项。默认情况下，是没有这个选项的。如果加入了这个选项，那么将会在生成的event-config.h中，定义_EVENT_DISABLE_MM_REPLACEMENT这个宏。关于event-config.h文件，可以参考[这个小节](#event-config)。下面是Libevent内存分配函数的声明(在mm-internal.h文件)：
 
 ``` C
 //mm-internal.h文件  
@@ -368,7 +387,7 @@ void event_mm_free_(void *p);
 
 当然，即使没有禁止，如果用户没有定制自己的内存分配函数，最终还是调用C语言的标准内存分配函数。这一点在event_mm_xxxx这些函数的实现上可以看到。
 
- 这些函数的实现是在event.c文件中的。定制功能的实现原理和[前一篇博客](http://blog.csdn.net/luotuo44/article/details/38317797)中说到的定制实现原理是一样的。如下：
+ 这些函数的实现是在event.c文件中的。定制功能的实现原理和[《日志和错误处理》](#log-and-error)中说到的定制实现原理是一样的。如下：
 
 ``` C
 #ifndef _EVENT_DISABLE_MM_REPLACEMENT  
@@ -415,9 +434,9 @@ event_mm_malloc_(size_t sz)
 
 参考：http://www.wangafu.net/~nickm/libevent-book/Ref1_libsetup.html
 
+<span id="multi-thread-1"></span>
 ## 5.多线程、锁、条件变量(一)
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38350633)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38350633)
 
 Libevent提供给用户的可见多线程API都在thread.h文件中。在这个文件提供的API并不多。基本上都是一些定制函数，像前面几篇博文说到的，可以为Libevent定制用户自己的多线程函数。
 
@@ -427,7 +446,7 @@ Libevent默认是不开启多线程的，也没有锁、条件变量这些东西
 
 thread.h文件只提供了定制线程的接口，并没有提供使用线程接口。这点很像前面说到的Libevent日志和内存分配。其实这也很好理解。因为都是你提供定制的线程函数。你都能提供了，你肯定有办法使用，没必要要Libevent提供一些API给你使用。
 
-如果用户为libevent开启了多线程，那么libevent里面的函数就会变成线程安全的。此时主线程在使用event_base_dispatch，别的线程是可以线程安全地使用event_add把一个event添加到主线程的event_base中。具体的工作原理可以参考[《evthread_notify_base通知主线程》](http://blog.csdn.net/luotuo44/article/details/38556059)。
+如果用户为libevent开启了多线程，那么libevent里面的函数就会变成线程安全的。此时主线程在使用event_base_dispatch，别的线程是可以线程安全地使用event_add把一个event添加到主线程的event_base中。具体的工作原理可以参考[《evthread_notify_base通知主线程》](#evthread-notify-base)。
 
 ### 锁和条件变量结构体
 
@@ -630,9 +649,9 @@ evthread_use_windows_threads(void)
 
 参考：http://www.wangafu.net/~nickm/libevent-book/Ref1_libsetup.html
 
+<span id="multi-thread-2"></span>
 ## 6.多线程、锁、条件变量(二)
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38360525)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38360525)
 
 ### Debug锁操作
 
@@ -807,7 +826,7 @@ evthread_debug_lock_mark_unlocked(unsigned mode, struct debug_lock *lock)
 
 ### 定制线程锁、条件变量
 
-现在来看一下线程锁定制函数evthread_set_lock_callbacks。本来这个定制应该放在[前一篇博客](http://blog.csdn.net/luotuo44/article/details/38350633)讲的。但由于其实现用到了调试锁的一些内容，所以就放到这里讲。
+现在来看一下线程锁定制函数evthread_set_lock_callbacks。本来这个定制应该放在[《多线程、锁、条件变量(一)》小节](#multi-thread-1)中讲的。但由于其实现用到了调试锁的一些内容，所以就放到这里讲。
 
 ``` C
 //evthread.h文件  
@@ -1087,9 +1106,9 @@ _evthread_is_debug_lock_held(void *lock_)
 
 参考：http://www.wangafu.net/~nickm/libevent-book/Ref1_libsetup.html
 
+<span id="tailq-queue"></span>
 ## 7. TAILQ_QUEUE队列
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38374009)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38374009)
 
 Libevent源码中有一个queue.h文件，位于compat/sys目录下。该文件里面定义了5个数据结构，其中TAILQ_QUEUE是使得最广泛的。本文就说一下这个数据结构。
 
@@ -1536,9 +1555,9 @@ struct event_list
 
 在event结构体中，则有几个TAILQ_ENTRY(event)类型的成员变量。这是因为根据不同的条件，采用不同的队列把这些event结构体连在一起，放到一条队列中。
 
+<span id="event-io-map"></span>
 ## 8.event_io_map哈希表
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38403241)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38403241)
 
 上面说到了TAILQ_QUEUE队列，它可以把多个event结构体连在一起。是一种归类方式。本文也将讲解一种将event归类、连在一起的结构：哈希结构。
 
@@ -2431,12 +2450,11 @@ evmap_io_add(struct event_base *base, evutil_socket_t fd, struct event *ev)
 
 GET_IO_SLOT_AND_CTOR宏的作用就是让ctx指向struct event_map_entry结构体中的TAILQ_HEAD。这样就可以使用TAILQ_INSERT_TAIL宏，把ev变量插入到队列中。如果有现成的event_map_entry就直接使用，没有的话就新建一个。
 
+<span id="event-signal-map"><span>
 ## 9.event_signal_map
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38424173)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38424173)
 
 ### 相关结构体
-
 因为event_signal_map结构体实在太简单了，所以不像event_io_map那样，有一个专门的文件。由于没有专门的文件，那么只能从蛛丝马迹上探索这个event_signal_map结构了。
 
 通过一些搜索，可以得到与event_signal_map相关联的一些结构体有下面这些：
@@ -2573,11 +2591,11 @@ evmap_signal_add(struct event_base *base, int sig, struct event *ev)
 
 同样，GET_SIGNAL_SLOT_AND_CTOR宏的作用就是让ctx指向structevmap_signal结构体中的TAILQ_HEAD。这样就可以使用TAILQ_INSERT_TAIL宏，把ev变量插入到队列中。如果有现成的struct evmap_signal就直接使用，没有的话就新建一个。
 
-有一点要提出，虽然前一小节中提到在非Windows系统中，event_io_map也被定义成了event_signal_map，但实际上他们并不会由链表连在一起。因为在event_base结构体中，分别有struct event_io_map变量io和event_signal_map变量sigmap。所有的io类型的event结构体会被放到io中，而信号类型的event则会被放到sigmap变量中。
+有一点要提出，虽然[前一小节](#event-signal-map)中提到在非Windows系统中，event_io_map也被定义成了event_signal_map，但实际上他们并不会由链表连在一起。因为在event_base结构体中，分别有struct event_io_map变量io和event_signal_map变量sigmap。所有的io类型的event结构体会被放到io中，而信号类型的event则会被放到sigmap变量中。
 
+<span id="event-base-config"></span>
 ## 10.配置event_base
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38443569)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38443569)
 
 前面都是讲一些Libevent的一些辅助结构，现在来讲一下关键结构体：event_base。
 
@@ -2818,9 +2836,9 @@ currentmethod:        win32
 
 参考：http://www.wangafu.net/~nickm/libevent-book/Ref2_eventbase.html
 
+<span id="reactor"><span>
 ## 11. 跨平台Reactor接口的实现
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38458469)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38458469)
 
 之前的文章讲了怎么实现线程、锁、内存分配、日志等功能的跨平台。Libevent最重要的跨平台功能还是实现了多路IO接口的跨平台(即Reactor模式)。这使得用户可以在不同的平台使用统一的接口。这篇博文就是来讲解Libevent是怎么实现这一点的。
 
@@ -2960,10 +2978,11 @@ static const struct eventop *eventops[] = {
 };
 ```
 
-它根据宏定义判断当前的OS环境是否有某个多路IO复用函数。如果有，那么就把与之对应的struct eventop结构体指针放到一个全局数组中。有了这个数组，现在只需将数组的某个元素赋值给evsel变量即可。因为是条件宏，在编译器编译代码之前完成宏的替换，所以是可以这样定义一个数组的。关于这些检测当前OS环境的宏，可以参考[《event-config.h指明所在系统的环境》](http://blog.csdn.net/luotuo44/article/details/38300965)。
+它根据宏定义判断当前的OS环境是否有某个多路IO复用函数。如果有，那么就把与之对应的struct eventop结构体指针放到一个全局数组中。有了这个数组，现在只需将数组的某个元素赋值给evsel变量即可。因为是条件宏，在编译器编译代码之前完成宏的替换，所以是可以这样定义一个数组的。关于这些检测当前OS环境的宏，可以参考[《event-config.h指明所在系统的环境》](#event-config)。
 
 从数组的元素可以看到，低下标存的是高效多路IO复用函数。如果从低到高下标选取一个多路IO复用函数，那么将优先选择高效的。
 
+<span id="reactor-realization"></span>
 #### 具体实现
 
 现在看一下Libevent是怎么选取一个多路IO复用函数的：
@@ -3024,7 +3043,7 @@ event_base_new_with_config(const struct event_config *cfg)
 }
 ```
 
-可以看到，首先从eventops数组中选出一个元素。如果设置了event_config，那么就对这个元素(即多路IO复用函数)特征进行检测，看其是否满足event_config所描述的特征。关于event_config，可以查看[《多路IO复用函数的选择配置》](http://blog.csdn.net/luotuo44/article/details/38443569#t2)。
+可以看到，首先从eventops数组中选出一个元素。如果设置了event_config，那么就对这个元素(即多路IO复用函数)特征进行检测，看其是否满足event_config所描述的特征。关于event_config，可以查看[《多路IO复用函数的选择配置》](#event-base-config)。
 
 ### 后端数据存储结构体
 
@@ -3085,7 +3104,7 @@ poll_init(struct event_base *base)
 }
 ```
 
-经过上面的一些处理后，Libevent在特定的OS下能使用到特定的多路IO复用函数。在之前博文中说到的evmap_io_add和evmap_signal_add函数中都会调用evsel->add。由于在新建event_base时就选定了对应的多路IO复用函数，给evsel、evbase变量赋值了，所以evsel->add能把对应的fd和监听事件加到对应的IO复用结构体保存。比如poll的add函数在一开始就有下面一行代码：
+经过上面的一些处理后，Libevent在特定的OS下能使用到特定的多路IO复用函数。在[之前小节](#event-io-map)中说到的evmap_io_add和evmap_signal_add函数中都会调用evsel->add。由于在新建event_base时就选定了对应的多路IO复用函数，给evsel、evbase变量赋值了，所以evsel->add能把对应的fd和监听事件加到对应的IO复用结构体保存。比如poll的add函数在一开始就有下面一行代码：
 
 ``` C
 struct pollop*pop = base->evbase;
@@ -3095,9 +3114,9 @@ struct pollop*pop = base->evbase;
 
 由于有evsel和evbase这个两个指针变量，当初始化完成之后，再也不用担心具体使用的多路IO复用函数是哪个了。evsel结构体的函数指针提供了统一的接口，上层的代码要使用到多路IO复用函数的一些操作函数时，直接调用evsel结构体提供的函数指针即可。也正是如此，Libevent实现了统一的跨平台Reactor接口。
 
+<span id="libevent-workflow"></span>
 ## 12.Libevent工作流程探究
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38501341)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38501341)
 
 之前的小节讲了很多Libevent的基础构件，现在以一个实际例子来初步探究Libevent的基本工作流程。由于还有很多Libevent的细节并没有讲所以，这里的探究还是比较简洁，例子也相当简单。
 
@@ -3135,7 +3154,7 @@ int main()
 }
 ```
 
-上面代码估计是不会比读者写的第一个Libevent程序复杂。但这已经包含了Libevent的基础工作流程。这里将进入这些函数的内部探究，并且只会讲解之前博文出现过的，没出现的，尽量不讲。在讲解之前，要先了解一下struct event这个结构体。
+上面代码估计是不会比读者写的第一个Libevent程序复杂。但这已经包含了Libevent的基础工作流程。这里将进入这些函数的内部探究，并且只会讲解之前文中出现过的，没出现的，尽量不讲。在讲解之前，要先了解一下struct event这个结构体。
 
 ### event结构体
 
@@ -3199,11 +3218,11 @@ event结构体里面有几个TAILQ_ENTRY队列节点类型。这里因为一个e
 
 event结构体只有一两个之前没有说到的概念，这不妨碍理解event结构体。而event_base结构体则会太多之前没有说到的概念，所以这里就不贴出event_base的代码了。
 
-~在读这篇博文前，最好读一下前面几篇博文，因为会用到其他讲到的东西。如果之前有讲过的东西，这里也将一笔带过。~
+在读这个小节之前，最好读一下前面几个小节，因为会用到其他讲到的东西。如果之前有讲过的东西，这里也将一笔带过。
 
 好了，开始探究。
 
-最前面的evthread_use_pthreads();就不多说了，看《多线程、锁、条件变量(一)》和《多线程、锁、条件变量(二)》这两个小节吧。
+最前面的evthread_use_pthreads();就不多说了，看[《多线程、锁、条件变量(一)》](#multi-thread-1)和[《多线程、锁、条件变量(二)》](#multi-thread-2)这两个小节吧。
 
 ### 创建event_base
 
@@ -3286,9 +3305,9 @@ event_base_new_with_config(const struct event_config *cfg)
 }
 ```
 
-这里用到了event_config结构体，关于这个结构体可以参考《配置event_base》小节。这个结构体主要是对event_base进行一些配置。另外代码中还讲到了怎么使用选择一个多IO复用函数，这个可以参考《跨平台Reactor接口的实现》小节。
+这里用到了event_config结构体，关于这个结构体可以参考[《配置event_base》](#event-base-config)小节。这个结构体主要是对event_base进行一些配置。另外代码中还讲到了怎么使用选择一个多IO复用函数，这个可以参考《跨平台Reactor接口的实现》小节。
 
-宏EVTHREAD_LOCKING_ENABLED主要是检测是否已经支持锁了。检测的方式也很简单，也就是检测_evthread_lock_fns全局变量中的lock成员变量是否不为NULL。有关这个_evthread_lock_fns全局变量可以查看《多线程、锁、条件变量(一)》小节。
+宏EVTHREAD_LOCKING_ENABLED主要是检测是否已经支持锁了。检测的方式也很简单，也就是检测_evthread_lock_fns全局变量中的lock成员变量是否不为NULL。有关这个_evthread_lock_fns全局变量可以查看[《多线程、锁、条件变量(一)》](#multi-thread-1)小节。
 
 ### 创建event
 
@@ -3327,7 +3346,7 @@ event_assign(struct event *ev, struct event_base *base, evutil_socket_t fd,
 
 从event_assign函数的名字可以得知它是进行赋值操作的。所以它能可以在event被初始化后再次调用。不过，初始化后再次调用的话，有些事情要注意。这个在后面的博客中会说到。
 
-从上面的代码可看到：**如果这个event是用来监听一个信号的，那么就不能让这个event监听读或者写事件**。原因是其与信号event的实现方法相抵触，具体可以参考《信号event的处理》小节。
+从上面的代码可看到：**如果这个event是用来监听一个信号的，那么就不能让这个event监听读或者写事件**。原因是其与信号event的实现方法相抵触，具体可以参考[《信号event的处理》](#event-signal)小节。
 
 注意，此时event结构体的变量ev_flags的值是EVLIST_INIT。对变量的追踪是很有帮助的。它指明了event结构体的状态。它通过以或运算的方式取下面的值：
 
@@ -3482,7 +3501,7 @@ event_queue_insert(struct event_base *base, struct event *ev, int queue)
 
 这个函数的主要作为是把event加入到对应的队列中。在这里，是为了把event加入到eventqueue这个已注册队列中，即将event向event_base注册。**注意，此时event结构体的ev_flags变量为EVLIST_INIT | EVLIST_INSERTED了。**
 
-#### 进入主循环，开始监听event
+### 进入主循环，开始监听event
 
 现在事件已经添加完毕，开始进入主循环event_base_dispatch函数。还是同样，该函数内部调用event_base_loop完成工作。
 
@@ -3524,7 +3543,7 @@ done:
 
 ![register event](http://img.blog.csdn.net/20140918092204682?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbHVvdHVvNDQ=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 
-#### 将已激活event插入到激活列表
+### 将已激活event插入到激活列表
 
 我们还是深入看看Libevent是怎么把event添加到激活队列的。dispatch是一个函数指针，它的实现都包含是一个多路IO复用函数。这里选择poll这个多路IO复用函数来作分析。
 
@@ -3640,7 +3659,7 @@ event_queue_insert(struct event_base *base, struct event *ev, int queue)
 
 **注意，此时event结构体的ev_flags变量为EVLIST_INIT | EVLIST_INSERTED | EVLIST_ACTIVE了。**
 
-#### 处理激活列表中的event
+### 处理激活列表中的event
 
 现在已经完成了将event插入到激活队列中。接下来就是遍历激活数组队列，把所有激活的event都处理即可。
 
@@ -3702,9 +3721,9 @@ event_process_active_single_queue(struct event_base *base,
 
 event_queue_remove函数的调用会改变event结构体的ev_flags变量的值。调用后， ev_flags变量为EVLIST_INIT | EVLIST_INSERTED。现在又可以等待下一次事件的到来了。
 
+<span id="event-priority"></span>
 ## 13.event优先级设置
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38512719)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38512719)
 
 event_base允许用户对它里面的event设置优先级，这样可以使得有些更重要的event能够得到优先处理。
 
@@ -3839,11 +3858,9 @@ event_assign(struct event *ev, struct event_base *base, evutil_socket_t fd,
 
 在这个函数里面，对event的成员变量进行了一些设置。其中，优先级的设置值为优先级数组长度的一半，所以是中间优先级。
 
-
-
+<span id="event-signal"></span>
 ## 14.信号event的处理
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38538991)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38538991)
 
 ### 信号event的工作原理
 
@@ -3909,7 +3926,7 @@ struct evsig_info {
 
 ### 初始化
 
-在前面的小节中《跨平台Reactor接口的实现》中，介绍了Libevent是如何选择一个多路IO复用函数的。在选定一个多路IO复用函数后，就会调用下面一行代码：
+在前面的小节中[《跨平台Reactor接口的实现》](#reactor)中，介绍了Libevent是如何选择一个多路IO复用函数的。在选定一个多路IO复用函数后，就会调用下面一行代码：
 
 ``` C
 base->evbase = base->evsel->init(base);
@@ -3981,7 +3998,7 @@ evsig_init(struct event_base *base)
 
 socketpair的两个端都调用evutil_make_socket_closeonexec，因为不能让子进程可以访问的这个socketpair。因为子进程的访问可能会出现扰乱。比如，子进程往socketpair发送信息，使得父进程的多路IO复用函数误以为信号发生了；父进程确实发生了信号，也往socketpair发送了一个字节，但却被子进程接收了这个字节。父进程没有监听到可读。
 
-在Windows中，并没有直接的可以使用的socketpair API。此时，Libevent就自己实现了一个socketpair。具体可以参考《通用类型和函数》小节。
+在Windows中，并没有直接的可以使用的socketpair API。此时，Libevent就自己实现了一个socketpair。具体可以参考[《通用类型和函数》](#common-type-and-function)小节。
 
 在函数的最后可以看到event_base的一个成员evsignal被赋值。evsignal是一个IO复用结构体，而evsigops是专门用于信号处理的IO复用结构体变量。定义如下：
 
@@ -4002,7 +4019,7 @@ static const struct eventop evsigops = {
 
 ### 将信号event加入到event_base
 
-前面的代码已经完成了“创建socketpair并将socketpair的一个读端于ev_signal相关联”。接下来看其他的工作。假如要对一个绑定了某个信号的event调用event_add函数，那么在event_add的内部会调用event_add_internal函数。而event_add_internal函数又会调用evmap_signal_add函数。如果看了之前的博文，应该对这个流程不陌生。下面看看evmap_signal_add函数：
+前面的代码已经完成了“创建socketpair并将socketpair的一个读端于ev_signal相关联”。接下来看其他的工作。假如要对一个绑定了某个信号的event调用event_add函数，那么在event_add的内部会调用event_add_internal函数。而event_add_internal函数又会调用evmap_signal_add函数。如果看了之前小节的内容，应该对这个流程不陌生。下面看看evmap_signal_add函数：
 
 ``` C
 //evmap.c文件  
@@ -4207,7 +4224,7 @@ int main()
 }
 ```
 
-运行上面代码, 通过在外部给这个进程发生信号的方式。可以看到，event_base确实无法监听到信号了。所有信号都被signal_handle捕抓了。
+运行上面代码, 通过在外部给这个进程发生信号的方式。可以看到，event_base确实无法监听到信号了。所有信号都被signal_handle捕捉了。
 
 ### 捕捉信号
 
@@ -4244,7 +4261,7 @@ evsig_handler(int sig)
 
 从evsig_handler函数的实现可以看到，实现得相当简单。只是将信号对应的值写入到socketpair中。evsig_base_fd是socketpair的写端，这是一个全局变量，在evsig_add函数中被赋值的。
 
-从“统一事件源”的工作原理来看，现在已经完成了对信号的捕抓，已经将该信号的当作IO事件写入到socketpair中了。现在event_base应该已经监听到socketpair可读了，并且会为调用回调函数evsig_cb了。下面看看evsig_cb函数。
+从“统一事件源”的工作原理来看，现在已经完成了对信号的捕捉，已经将该信号的当作IO事件写入到socketpair中了。现在event_base应该已经监听到socketpair可读了，并且会为调用回调函数evsig_cb了。下面看看evsig_cb函数。
 
 ``` C
 //signal.c文件  
@@ -4363,7 +4380,7 @@ event_active_nolock(struct event *ev, int res, short ncalls)
 
 由于这些函数的执行本身就是在Libevent处理event的回调函数之中的(Libevent正在处理内部的信号处理event)。所以并不需要从event_base_loop里的while循环里面再次执行一次evsel->dispatch()，才能执行到这次信号event。即无需等到下一次处理激活队列，就可以执行该信号event了。
 
-首先要明确，现在执行上面三个函数相当于在执行event的回调函数。所以其是运行在event_process_active函数之中的。为什么是在这里，可以参考《Libevent工作流程探究》小节。
+首先要明确，现在执行上面三个函数相当于在执行event的回调函数。所以其是运行在event_process_active函数之中的。为什么是在这里，可以参考[《Libevent工作流程探究》](#libevent-workflow)小节。
 
 分析如下：
 
@@ -4449,9 +4466,9 @@ event_signal_closure(struct event_base *base, struct event *ev)
 
 可以看到，如果对应的信号发生了多次，那么该信号event的回调函数将被执行多次。
 
+<span id="evthread-notify-base"></span>
 ## 15.evthread_notify_base通知主线程
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38556059)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38556059)
 
 一般来说，是主线程执行event_base_dispatch函数。本文也是如此，如无特别说明，event_base_dispatch函数是由主线程执行的。
 
@@ -4461,7 +4478,7 @@ event_signal_closure(struct event_base *base, struct event *ev)
 
 ### 工作原理
 
-Libevent提供的唤醒主线程机制也是挺简单的，其原理和《信号event的处理》一文中提到的方法是一样的。提供一个内部的IO event，专门用于唤醒主线程。当其他线程有event要add进来时，就往这个内部的IO event写入一个字节。此时，主线程在dispatch时，就能检测到可读，也就醒来了。这就完成了通知。这过程和Libevent处理信号event是一样的。
+Libevent提供的唤醒主线程机制也是挺简单的，其原理和[《信号event的处理》](#event-signal)一文中提到的方法是一样的。提供一个内部的IO event，专门用于唤醒主线程。当其他线程有event要add进来时，就往这个内部的IO event写入一个字节。此时，主线程在dispatch时，就能检测到可读，也就醒来了。这就完成了通知。这过程和Libevent处理信号event是一样的。
 
 ### 相关结构体
 
@@ -4668,7 +4685,9 @@ evthread_notify_drain_default(evutil_socket_t fd, short what, void *arg)
 
 ### 注意事项
 
-有一点要注意：要让Libevent支持这种可通知机制，就必须让Libevent使用多线程，即在代码的一开始调用evthread_use_pthreads()或者evthread_use_windows_threads()。虽然用户可以手动调用函数evthread_make_base_notifiable。但实际上是不能实现通知功能的。分析如下：
+有一点要注意：要让Libevent支持这种可通知机制，就必须让Libevent使用多线程，即在代码的一开始调用evthread_use_pthreads()或者evthread_use_windows_threads()。虽然用户可以手动调用函数evthread_make_base_notifiable。但实际上是不能实现通知功能的。
+
+分析如下：
 
 Libevent代码中是通过调用函数evthread_notify_base来通知的。但这个函数都是在一个if语句中调用的。判断的条件为是否需要通知。If成立的条件中肯定会&&上一个EVBASE_NEED_NOTIFY(base)。比如在event_add_internal函数中的为：
 
@@ -4691,7 +4710,7 @@ notify是根据函数中的判断而来，而**EVBASE_NEED_NOTIFY这个宏定义
 
 event_base结构体中th_owner_id变量指明当前为event_base执行event_base_dispatch函数的是哪个线程。在event_base_loop函数中用宏EVTHREAD_GET_ID()赋值。
 
-如果一开始没有调用evthread_use_pthreads或者evthread_use_windows_threads，那么全局变量evthread_id_fn就为NULL。也就不能获取线程的ID了。EVBASE_NEED_NOTIFY宏也只会返回0，使得不能调用evthread_notify_base函数。关于线程这部分的分析，可以参考《多线程、锁、条件变量(一)》和《多线程、锁、条件变量(二)》。
+如果一开始没有调用evthread_use_pthreads或者evthread_use_windows_threads，那么全局变量evthread_id_fn就为NULL。也就不能获取线程的ID了。EVBASE_NEED_NOTIFY宏也只会返回0，使得不能调用evthread_notify_base函数。关于线程这部分的分析，可以参考[《多线程、锁、条件变量(一)》](#multi-thread-1)和[《多线程、锁、条件变量(二)》](#multi-thread-2)。
 
 下面的用一个例子验证。
 
@@ -4756,11 +4775,9 @@ int main(int argc, char ** argv)
 
 如果次线程的event被add到event_base中，那么每2秒timeout_cb函数就会被调用一次。如果没有被add的话，就永远等待下去，没有任何输出。
 
-
-
+<span id="event-timeout"><span>
 ## 16.超时event的处理
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38637671)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38637671)
 
 ### 如何成为超时event
 
@@ -4771,7 +4788,7 @@ Libevent允许创建一个超时event，使用evtimer_new宏。
 #define evtimer_new(b, cb, arg)        event_new((b), -1, 0, (cb), (arg))
 ```
 
-从宏的实现来看，它一样是用到了一般的event_new，并且不使用任何的文件描述符。从超时event宏的实现来看，无论是evtimer创建的event还是一般event_new创建的event，都能使得Libevent进行超时监听。其实，使得Libevent对一个event进行超时监听的原因是：在调用event_add的时候，第二参数不能为NULL，要设置一个超时值。如果为NULL，那么Libevent将不会为这个event监听超时。下文统一称设置了超时值的event为超时event。
+从宏的实现来看，它一样是用到了一般的event_new，并且不使用任何的文件描述符。从超时event宏的实现来看，无论是evtimer创建的event还是一般event_new创建的event，都能使得Libevent进行超时监听。其实，使得Libevent对一个event进行超时监听的原因是：在调用event_add的时候，第二参数不能为NULL，要设置一个超时值。如果为NULL，那么Libevent将不会为这个event监听超时。下文统一称**设置了超时值的event为超时event**。
 
 ### 超时event的原理
 
@@ -4872,7 +4889,7 @@ event_add_internal(struct event *ev, const struct timeval *tv,
 
 对于同一个event，如果是IO event或者信号event，那么将无法多次添加。但如果是一个超时event，那么是可以多次添加的。并且对应超时值会使用最后添加时指明的那个，之前的统统不要，即替换掉之前的超时值。
 
-代码中出现了多次使用了notify变量。这主要是用在：次线程在执行这个函数，而主线程在执行event_base_dispatch。前面说到Libevent能对超时event进行监听的原理是：多路IO复用函数有一个超时参数。在次线程添加的event的超时值更小，又或者替换了之前最小的超时值。在这种情况下，都是要通知主线程，告诉主线程，最小超时值已经变了。关于通知主线程evthread_notify_base，可以参考博文《evthread_notify_base通知主线程》。
+代码中出现了多次使用了notify变量。这主要是用在：次线程在执行这个函数，而主线程在执行event_base_dispatch。前面说到Libevent能对超时event进行监听的原理是：多路IO复用函数有一个超时参数。在次线程添加的event的超时值更小，又或者替换了之前最小的超时值。在这种情况下，都是要通知主线程，告诉主线程，最小超时值已经变了。关于通知主线程evthread_notify_base，可以参考博文[《evthread_notify_base通知主线程》](#evthread-notify-base)。
 
 代码中的第三个判断体中用到了ev->ev_io_timeout。但event结构体中并没有该变量。其实，ev_io_timeout是一个宏定义。
 
@@ -5018,7 +5035,7 @@ timeout_process(struct event_base *base)
 }
 ```
 
-当从多路IO复用函数返回时，就检查时间小根堆，看有多少个event已经超时了。如果超时了，那就把这个event加入到event_base的激活队列中。并且把这个超时del(删除)掉，这主要是用于非PERSIST 超时event的。删除一个event的具体操作可以查看[这里](http://blog.csdn.net/luotuo44/article/details/38739549#t3)。
+当从多路IO复用函数返回时，就检查时间小根堆，看有多少个event已经超时了。如果超时了，那就把这个event加入到event_base的激活队列中。并且把这个超时del(删除)掉，这主要是用于非PERSIST 超时event的。删除一个event的具体操作可以查看[这里](#delete-event)。
 
 #### 处理永久超时event
 
@@ -5121,9 +5138,9 @@ event_persist_closure(struct event_base *base, struct event *ev)
 
 从前面的源码分析也可以得到：如果一个event监听可读的同时也设置了超时值，并且一直没有数据可读，最后超时了，那么这个event将会被删除掉，不会再等。
 
-
+<span id="time-management"><span>
 ## 17.Libevent时间管理
-
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/38661787)
 ### 基本时间操作函数
 
 Libevent采用的时间类型是struct  timeval，这个类型在很多平台都提供了。此外，Libevent还提供了一系列的时间操作函数。比如两个struct timeval相加、相减、比较大小。有些平台直接提供了一些时间操作函数，但有些则没有，那么Libevent就自己实现。这些宏如下：
@@ -5172,9 +5189,9 @@ Libevent采用的时间类型是struct  timeval，这个类型在很多平台都
 #endif
 ```
 
-代码中的那些条件宏，是在配置Libevent的时候检查所在的系统环境而定义的。具体的内容，可以参考《event-config.h指明所在系统的环境》一文。
+代码中的那些条件宏，是在配置Libevent的时候检查所在的系统环境而定义的。具体的内容，可以参考[《event-config.h指明所在系统的环境》](#event-config)小节。
 
-Libevent的时间一般是用在超时event的。对于超时event，用户只需给出一个超时时间，比如多少秒，而不是一个绝对时间。但在Libevent内部，要将这个时间转换成绝对时间。所以在Libevent内部会经常获取系统时间(绝对时间)，然后进行一些处理，比如，转换、比较。
+Libevent的时间一般是用在超时event的。对于超时event，用户只需给出一个超时时间，比如多少秒，而不是一个绝对时间。但在Libevent内部，要将这个时间转换成绝对时间。所以在Libevent内部会经常获取系统时间（绝对时间），然后进行一些处理，比如，转换、比较。
 
 ### cache时间
 
@@ -5209,7 +5226,7 @@ update_time_cache(struct event_base *base)
 }
 ```
 
-tv_cache是通过调用gettime来获取时间。由于tv_cache.tv_sec已经赋值为0，所以它将使用系统提供的时间函数得到时间。代码也展示了，如果event_base的配置中定义了EVENT_BASE_FLAG_NO_CACHE_TIME宏，将不能使用cache时间。关于这个宏的设置可以参考《配置event_base》一文。
+tv_cache是通过调用gettime来获取时间。由于tv_cache.tv_sec已经赋值为0，所以它将使用系统提供的时间函数得到时间。代码也展示了，如果event_base的配置中定义了EVENT_BASE_FLAG_NO_CACHE_TIME宏，将不能使用cache时间。关于这个宏的设置可以参考[《配置event_base》](#event-base-config)一文。
 
 ### 处理用户手动修改系统时间
 
@@ -5452,10 +5469,9 @@ int main()
  
 另外，Libevent并没有考虑把时钟往后调，比如现在是9点，用户把系统时间调成10点。上面的代码如果用户是在event_add之后修改系统时间，就能发现这个bug。
 
-
+<span id="manage-timeout-event"/>
 ## 18.管理超时event
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38678333)
+[回目录](#toc)   [原文地址](http://blog.csdn.net/luotuo44/article/details/38678333)
 
 前面的博文已经说到，如果要对多个超时event同时进行监听，就要对这些超时event进行集中管理，能够方便地(时间复杂度小)获取、加入、删除一个event。
 
@@ -5475,7 +5491,7 @@ Libevent的小根堆和数据结构教科书上的小根堆几乎是一样的。
 
 common-timeout的思想是，既然有大量的超时event具有相同的超时时长，那么就它们必定依次激活。如果把它们按照超时时间升序地放到一个队列中(在Libevent中就是这样做的)，那么每次只需检查队列的第一个超时event即可。因为其他超时event肯定在第一个超时之后才超时的。
 
-前面说到common-timeout和小根堆是配合使用的。从common-timeout中选出最早超时的那个event，将之插入到小根堆中。然后通过小根堆对这个event进行超时监控。超时后再从common-timeout中选出下一个最早超时的event。具体的超时监控处理过程可以参考《超时event的处理》一文。通过这样处理后，就不用把大量的超时event都插入到小根堆中。
+前面说到common-timeout和小根堆是配合使用的。从common-timeout中选出最早超时的那个event，将之插入到小根堆中。然后通过小根堆对这个event进行超时监控。超时后再从common-timeout中选出下一个最早超时的event。具体的超时监控处理过程可以参考[《超时event的处理》](#event-timeout)小节。通过这样处理后，就不用把大量的超时event都插入到小根堆中。
 
 下面看一下Libevent的具体实现吧。
 
@@ -5510,7 +5526,7 @@ struct common_timeout_list {
 
 common_timeout_list结构体里面有一个event结构体成员，所以并不是从多个具有相同超时时长的超时event中选择一个作为代表，而是在内部有一个event。
 
-common_timeout_list是使用struct  event_list结构体队列来管理event，它是一种TAILQ_QUEUE队列，可以参考博文《TAILQ_QUEUE队列》。
+common_timeout_list是使用struct  event_list结构体队列来管理event，它是一种TAILQ_QUEUE队列，可以参考[《TAILQ_QUEUE队列》](#tailq_queue)小节。
 
 ### 使用common-timeout
 
@@ -5703,7 +5719,7 @@ event_add_internal(struct event *ev, const struct timeval *tv,
 }
 ```
 
-由于在《超时event的处理》一文中已经对这个函数进行了一部分讲解，现在只讲有关common-timeout部分。
+由于在[《超时event的处理》](#event-timeout)小节中已经对这个函数进行了一部分讲解，现在只讲有关common-timeout部分。
 
 虽然上面的代码省略了很多东西，但是有一点要说明，当超时event被加入common-timeout时并不会设置notify变量的，即不需要通知主线程。
 
@@ -5829,8 +5845,7 @@ common_timeout_callback(evutil_socket_t fd, short what, void *arg)
 由于Libevent这个内部超时event的优先级是最高的，所以在接下来就会处理用户的超时event，而无需等到下一轮多路IO复用函数调用返回后。这一点同信号event是一样的，在《信号event的处理》博文的最后有一些论证。
 
 ## 19.与event相关的一些函数和操作
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38739549)
+[回目录](#toc) [原文地址](http://blog.csdn.net/luotuo44/article/details/38739549)
 
 Libevent提供了一些与event相关的操作函数和操作。本文就重点讲一下这方面的源代码。
 
@@ -5893,6 +5908,7 @@ event_get_assignment(const struct event *event, struct event_base **base_out, ev
 
 前面的那些函数是获取单个参数的，最后那个函数可以同时获取多个参数。并且如果不想获取某个参数，可以对应地传入一个NULL。
 
+<span id="event_status"/>
 ### event的状态
 
 一个event是可以有多个状态的，比如已初始化状态(initialized)、未决状态(pending)、激活状态(active)。
@@ -5976,7 +5992,7 @@ event_pending(const struct event *ev, short event, struct timeval *tv)
 
 event_pending函数的一个作用是可以判断一个event是否已经从event_base中删除了。比如说，某个event监听写事件而加入了event_base，但可能在某个时刻被删除。那么可以用下面的代码判断这个event是否已经被删除了。
 
-
+<span id="manual-activate-event"/>
 ### 手动激活event
 
 除了运行event_base_dispatch死等外界条件把event激活外，Libevent还提供了一个API函数event_active，可以手动地把一个event激活。
@@ -6035,6 +6051,7 @@ event_active_nolock(struct event *ev, int res, short ncalls)
 
 由于手动激活一个event是直接把这个event插入到激活队列的，所以event的被激活原因(由res参数所指定)可以不是该event监听的事件。比如说该event只监听了EV_READ事件，那么可以调用event_active(ev,EV_SIGNAL, 1);用信号事件激活该event。
 
+<span id="delete-event"><span>
 ### 删除event
 
 之前的博文都只是讲怎么创建event和将之add到event_base中。现在来讲一下怎么删除一个event。
@@ -6120,9 +6137,9 @@ event_del_internal(struct event *ev)
 
 删除一个event这个操作可能不是主线程调用的，这时就可能需要通知主线程。关于通知主线程的原理可以参考博文《evthread_notify_base通知主线程》。
 
+<span id="common-type-and-function"/>
 ## 20.通用类型和函数
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38780157)
+[回目录](#toc) [原文地址](http://blog.csdn.net/luotuo44/article/details/38780157)
 
  Libevent定义了一系列的可移植的兼容类型和函数。这使得在各个系统上都有一致的效果，Libevent一般都会在兼容通用类型和函数的前面加上ev或evutil前缀。
 
@@ -6383,6 +6400,7 @@ Libevent也是可以用于ipv6的。所以Libevent就定义了两个通用的函
 
 evutil_parse_sockaddr_port函数是用来解析一个字符串的。字符串的格式是,IP:port。比如，8.8.8.8:53。这个函数的作用就是将字符串所表示的ip和端口进行解析，并存放到参数out所指向的结构体上。之前，我们需要手动将一个ip和端口赋值给sockaddr_in 结构体上。现在有这个函数，这工作不用我们做了。第三个参数是一个 值-结果 参数。即调用函数时，它的值是第二个参数out指向空间的大小。函数返回后，它的值指明该函数写了多少字节在out上。具体的实现这里也不说了。
 
+<span id="struct_offset"/>
 #### 结构体偏移量
 
 这个函数的功能主要是求结构体成员在结构体中的偏移量。定义如下：
@@ -6429,9 +6447,9 @@ EVUTIL_UPCAST宏的工作原理也是挺简单的，成员变量的地址减去�
  
 参考：http://www.wangafu.net/~nickm/libevent-book/Ref5_evutil.html
 
+<span id="evconnlistener"/>
 ## 21.连接监听器evconnlistener
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/38800363)
+[回目录](#toc)   [原文地址](http://blog.csdn.net/luotuo44/article/details/38800363)
 
 ### 使用evconnlistener
 
@@ -6745,7 +6763,7 @@ event_listener_enable(struct evconnlistener *lev)
 
 在evconnlistener_enable函数里面，如果用户没有设置回调函数，那么就不会调用event_listener_enable。也就是说并不会add到event_base中。
 
-event_listener_enable函数里面的宏EVUTIL_UPCAST可以根据结构体成员变量的地址推算出结构体的起始地址。有关这个宏，可以查看”[结构体偏移量](http://blog.csdn.net/luotuo44/article/details/38780157#t10)”。
+event_listener_enable函数里面的宏EVUTIL_UPCAST可以根据结构体成员变量的地址推算出结构体的起始地址。有关这个宏，可以查看[《结构体偏移量》](#struct_offset)小节。
 
 #### 处理客户端的连接请求
 
@@ -6903,9 +6921,9 @@ event_listener_destroy(struct evconnlistener *lev)
 
 参考：http://www.wangafu.NET/~nickm/libevent-book/Ref8_listener.html
 
+<span id="buffer-struct-and-basic-op"/>
 ## 22.evbuffer结构与基本操作
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/39290721)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/39290721)
 
 对于非阻塞IO的网络库来说，buffer几乎是必须的。Libevent在1.0版本之前就提供了buffer功能。现在来看一下Libevent的buffer。
 
@@ -7034,6 +7052,7 @@ evbuffer_new(void)
 }
 ```
 
+<span id="buffer-op">
 ### Buffer的数据操作
 
 #### 在链表尾添加数据
@@ -7713,9 +7732,9 @@ evbuffer_remove(struct evbuffer *buf, void *data_out, size_t datlen)
 
 可以看到evbuffer_remove是先复制数据，然后才删除evbuffer的数据。而evbuffer_drain则直接删除evbuffer的数据，而不会复制。
 
+<span id="more-buffer-operation"/>
 ## 23.更多evbuffer操作函数
-
-[原文地址](http://blog.csdn.net/luotuo44/article/details/39325447)
+[回目录](#toc)  [原文地址](http://blog.csdn.net/luotuo44/article/details/39325447)
 
 ### 锁操作
 
@@ -7750,7 +7769,7 @@ evbuffer_enable_locking(struct evbuffer *buf, void *lock)
 }
 ```
 
-可以看到，第二个参数可以为NULL。此时函数内部会申请一个锁。明显如果要让evbuffer能使用锁，就必须在一开始就调用evthread_use_windows_threads()或者evthread_use_pthreads(),关于这个可以参考[一篇博文](http://blog.csdn.net/luotuo44/article/details/38350633)。
+可以看到，第二个参数可以为NULL。此时函数内部会申请一个锁。明显如果要让evbuffer能使用锁，就必须在一开始就调用evthread_use_windows_threads()或者evthread_use_pthreads(),关于这个可以参考[《多线程、锁、条件变量(一)》](#multi-thread-1)小节。
 
 因为用户操控这个evbuffer，所以Libevent提供了加锁和解锁接口给用户使用。
 
@@ -7790,7 +7809,7 @@ evbuffer_unlock(struct evbuffer *buf)
 
 #### 查找结构体
 
-对于一个数组或者一个文件，只需一个下标或者偏移量就可以定位查找了。但对于evbuffer来说，它的数据是由一个个的evbuffer_chain用链表连在一起的。所以在evbuffer中定位，不仅仅要有一个偏移量，还要指明是哪个evbuffer_chain，甚至是在evbuffer_chain中的偏移量。因此Libevent定义了一个查找(定位)结构体：
+对于一个数组或者一个文件，只需一个下标或者偏移量就可以定位查找了。但对于evbuffer来说，它的数据是由一个个的evbuffer_chain用链表连在一起的。所以在evbuffer中定位，不仅仅要有一个偏移量，还要指明是哪个evbuffer_chain，甚至是在evbuffer_chain中的偏移量。因此Libevent定义了一个查找（定位）结构体：
 
 ``` C
 //buffer.h文件  
@@ -7866,7 +7885,7 @@ evbuffer_ptr_set(struct evbuffer *buf, struct evbuffer_ptr *pos,
 }
 ```
 
-可以看到，该函数只考虑了向后面的chain移动定位指针，不能向。当然如果参数position小于0，并且移动时并不会跨越当前的chain，还是可以的。不过最好不要这样做。如果确实想移回头，那么可以考虑下面的操作。
+可以看到，该函数只考虑了向后面的chain移动定位指针，不能向前移动。当然如果参数position小于0，并且移动时并不会跨越当前的chain，还是可以的。不过最好不要这样做。如果确实想移回头，那么可以考虑下面的操作。
 
 ``` C
 pos.position -= 20;//移回头20个字节。  
@@ -7888,7 +7907,7 @@ static inline int
 evbuffer_strspn(struct evbuffer_ptr *ptr, const char *chrset); 
 ```
 
-函数evbuffer_strchr是从it指向的evbuffer_chain开始查找，会往后面的链表查找。it是一个值-结果参数，如果查找到了，那么it将会指明被查找字符的位置，并返回相对于evbuffer的总偏移量(即it->pos)。如果没有找到，就返回-1。由于实现都是一般的字符比较，所以就不列出代码了。函数evbuffer_getchr很容易理解也不列出代码了。
+函数evbuffer_strchr是从it指向的evbuffer_chain开始查找，会往后面的链表查找。it是一个值-结果参数，如果查找到了，那么it将会指明被查找字符的位置，并返回相对于evbuffer的总偏移量（即it->pos）。如果没有找到，就返回-1。由于实现都是一般的字符比较，所以就不列出代码了。函数evbuffer_getchr很容易理解也不列出代码了。
 
 第三个函数evbuffer_strspn的参数chrset虽然是一个字符串，其实内部也是比较字符的。该函数所做的操作和C语言标准库里面的strspn函数是一样的。这里也不多说了。关于strspn函数的理解可以查看[这里](http://blog.csdn.net/luotuo44/article/details/24933673#t3)。
 
@@ -8191,8 +8210,8 @@ done:
 }
 ```
 
+<span id="callback_struct"/>
 ### 回调函数
-
 evbuffer有一个回调函数队列成员callbacks，向evbuffer删除或者添加数据时，就会调用这些回调函数。之所以是回调函数队列，是因为一个evbuffer是可以添加多个回调函数的，而且同一个回调函数可以被添加多次。
 
 使用回调函数时有一点要注意：因为当evbuffer被添加或者删除数据时，就会调用这些回调函数，所以在回调函数里面不要添加或者删除数据，不然将导致递归，死循环。
@@ -8264,7 +8283,7 @@ evbuffer_add_cb(struct evbuffer *buffer, evbuffer_cb_func cb, void *cbarg)
 }
 ```
 
-参数cbarg就是回调函数被调用时的那个arg参数，这点对于熟悉Libevent的读者应该不难理解。上面这个函数是被一个evbuffer_cb_entry结构体指针插入到callbacks队列的前面，有关TAILQ_HEAD队列和相关的插入操作可以参考博文[《TAILQ_QUEUE队列》](http://blog.csdn.net/luotuo44/article/details/38374009)。
+参数cbarg就是回调函数被调用时的那个arg参数，这点对于熟悉Libevent的读者应该不难理解。上面这个函数是被一个evbuffer_cb_entry结构体指针插入到callbacks队列的前面，有关TAILQ_HEAD队列和相关的插入操作可以参考[《TAILQ_QUEUE队列》](#tailq_queue)小节。
 
 上面函数返回一个evbuffer_cb_entry结构体指针。用户可以利用这个返回的结构体作一些处理，因为这个结构体已经和添加的回调函数绑定了。比如可以设置这个回调函数的标志值。或者利用这个结构体指针作为标识，从队列中找到这个回调函数并删除之。如下面代码所示:
 
@@ -8505,7 +8524,7 @@ _evbuffer_read_setup_vecs(struct evbuffer *buf, ev_ssize_t howmuch,
 
 如果所在的系统不支持类似readv这样的函数，那么Libevent就只能在一个evbuffer_chain申请一个足够大的空间，然后直接调用read函数了。
 
-前面说到的扩容，分别是由函数_evbuffer_expand_fast和函数evbuffer_expand_singlechain完成的。在《evbuffer结构与基本操作》一文中已经有对这两个函数的介绍，这里就不多说了。
+前面说到的扩容，分别是由函数_evbuffer_expand_fast和函数evbuffer_expand_singlechain完成的。在[《evbuffer结构与基本操作》](#buffer-struct-and-basic-op)小节中已经有对这两个函数的介绍，这里就不多说了。
 
 由于存在是否支持类似readv函数 这两种情况，所以evbuffer_read在实现上也出现了两种实现。
 
@@ -8738,12 +8757,13 @@ done:
 
 参考：http://www.wangafu.net/~nickm/libevent-book/Ref7_evbuffer.html
 
-
+<span id="buffer_event"/>
 ## 24.bufferevent工作流程探究
+[回目录](#toc)   [原文地址](http://blog.csdn.net/luotuo44/article/details/39344743)
 
-和之前的《Libevent工作流程探究》一样，这里也是用一个例子来探究bufferevent的工作流程。具体的例子可以参考[《Libevent使用例子，从简单到复杂》](http://blog.csdn.net/luotuo44/article/details/34416429)，这里就不列出了。其实要做的例子也就是bufferevent_socket_new、bufferevent_setcb、bufferevent_enable这几个函数。
+和之前的[《Libevent工作流程探究》](#libevent-workflow)一样，这里也是用一个例子来探究bufferevent的工作流程。具体的例子可以参考[《Libevent使用例子，从简单到复杂》](http://blog.csdn.net/luotuo44/article/details/34416429)，这里就不列出了。其实要做的例子也就是bufferevent_socket_new、bufferevent_setcb、bufferevent_enable这几个函数。
 
-因为本文会用到《Libevent工作流程探究》中提到的说法，比如将一个event插入到event_base中。所以读者最好先读一下那篇博文。此外，因为bufferevent结构体本身会使用evbuffer结构体和还会调用相应的一些操作，所以读者还应该先阅读《evbuffer结构与基本操作》和《更多evbuffer操作函数》。
+因为本文会用到[《Libevent工作流程探究》](#libevent-workflow)中提到的说法，比如将一个event插入到event_base中。所以读者最好先读一下[这个小节](#libevent-workflow)。此外，因为bufferevent结构体本身会使用evbuffer结构体和还会调用相应的一些操作，所以读者还应该先阅读[《evbuffer结构与基本操作》](#buffer-struct-and-basic-op)和[《更多evbuffer操作函数》](#more-buffer-operation)。
 
 ### bufferevent结构体
 
@@ -8914,7 +8934,7 @@ bufferevent_socket_new(struct event_base *base, evutil_socket_t fd,
 
 留意函数里面的evbuffer_add_cb调用，后面会说到。
 
-函数在最后面会冻结两个缓冲区。其实，虽然这里冻结了，但实际上Libevent在读数据或者写数据之前会解冻的读完或者写完数据后，又会马上冻结。这主要防止数据被意外修改。用户一般不会直接调用evbuffer_freeze或者evbuffer_unfreeze函数。一切的冻结和解冻操作都由Libevent内部完成。还有一点要注意，因为这里只是把写缓冲区的头部冻结了。所以还是可以往写缓冲区的尾部追加数据。同样，此时也是可以从读缓冲区读取数据。这个是必须的。因为在Libevent内部不解冻的时候，用户需要从读缓冲区中获取数据(这相当于从socket fd中读取数据)，用户也需要把数据写到写缓冲区中(这相当于把数据写入到socket fd中)。
+函数在最后面会冻结两个缓冲区。其实，虽然这里冻结了，但实际上Libevent在读数据或者写数据之前会解冻的读完或者写完数据后，又会马上冻结。这主要防止数据被意外修改。用户一般不会直接调用evbuffer_freeze或者evbuffer_unfreeze函数。一切的冻结和解冻操作都由Libevent内部完成。还有一点要注意，因为这里只是把写缓冲区的头部冻结了。所以还是可以往写缓冲区的尾部追加数据。同样，此时也是可以从读缓冲区读取数据。这个是必须的。因为在Libevent内部不解冻的时候，用户需要从读缓冲区中获取数据（这相当于从socket fd中读取数据），用户也需要把数据写到写缓冲区中（这相当于把数据写入到socket fd中）。
 
 在bufferevent_socket_new函数里面会调用函数bufferevent_init_common完成公有部分的初始化。
 
@@ -9016,7 +9036,7 @@ bufferevent_setcb(struct bufferevent *bufev,
 
 相信读者也知道，即使调用了bufferevent_socket_new和bufferevent_setcb，这个bufferevent还是不能工作，必须调用bufferevent_enable。为什么会这样的呢？
 
-如果看过之前的那些博文，相信读者知道，一个event能够工作，不仅仅需要new出来，还要调用event_add函数，把这个event添加到event_base中。在本文前面的代码中，并没有看到event_add函数的调用。所以还需要调用一个函数，把event添加到event_base中。函数bufferevent_enable就是完成这个工作的。
+如果看过之前的小节，相信读者知道，一个event能够工作，不仅仅需要new出来，还要调用event_add函数，把这个event添加到event_base中。在本文前面的代码中，并没有看到event_add函数的调用。所以还需要调用一个函数，把event添加到event_base中。函数bufferevent_enable就是完成这个工作的。
 
 ``` C
 //bufferevent.c文件
@@ -9086,7 +9106,7 @@ be_socket_enable(struct bufferevent *bufev, short event)
 }
 ```
 
-如果读者熟悉Libevent的超时事件，那么可以知道Libevent是在event_add函数里面确定一个event的超时的。上面代码也展示了这一点，如果读或者写event设置了超时(即其超时值不为0)，那么就会作为参数传给event_add函数。如果读者不熟悉的Libevent的超时事件的话，可以参考上文中的《超时event的处理》小节。
+如果读者熟悉Libevent的超时事件，那么可以知道Libevent是在event_add函数里面确定一个event的超时的。上面代码也展示了这一点，如果读或者写event设置了超时(即其超时值不为0)，那么就会作为参数传给event_add函数。如果读者不熟悉的Libevent的超时事件的话，可以参考上文中的[《超时event的处理》](#event-timeout)小节。
 
 用户可以调用函数bufferevent_set_timeouts，设置读或者写事件的超时。代码如下：
 
@@ -9200,7 +9220,7 @@ be_socket_disable(struct bufferevent *bufev, short event)
 
 看来不能随便设置高水位，因为它会暂停读。如果只想设置低水位而不想设置高水位，那么在调用bufferevent_setwatermark函数时，高水位的参数设为0即可。
 
-那么什么时候取消挂起，让bufferevent可以继续读socket 数据呢？从高水位的意义来说，当然是当evbuffer里面的数据量小于高水位时，就能再次读取socket数据了。现在来看一下Libevent是怎么恢复读的。看一下设置水位的函数bufferevent_setwatermark吧，它进行了一些为高水位埋下了一个回调函数。对，就是evbuffer的回调函数。[前一篇博文](http://blog.csdn.net/luotuo44/article/details/39325447#t6)说到，当evbuffer里面的数据添加或者删除时，是会触发一些回调函数的。当用户移除evbuffer的一些数据量时，Libevent就会检查这个evbuffer的数据量是否小于高水位，如果小于的话，那么就恢复读事件。
+那么什么时候取消挂起，让bufferevent可以继续读socket 数据呢？从高水位的意义来说，当然是当evbuffer里面的数据量小于高水位时，就能再次读取socket数据了。现在来看一下Libevent是怎么恢复读的。看一下设置水位的函数bufferevent_setwatermark吧，它进行了一些为高水位埋下了一个回调函数。对，就是evbuffer的回调函数。[《更多evbuffer操作函数》](#callback_struct)说到，当evbuffer里面的数据添加或者删除时，是会触发一些回调函数的。当用户移除evbuffer的一些数据量时，Libevent就会检查这个evbuffer的数据量是否小于高水位，如果小于的话，那么就恢复读事件。
 
 不说这么多了，上代码。
 
@@ -9408,7 +9428,7 @@ bufferevent_readcb(evutil_socket_t fd, short event, void *arg)
 
 也就是说，不能监听可写事件。但我们确实要往fd中写数据，那怎么办？Libevent的做法是：当我们确实要写入数据时，才监听可写事件。也就是说我们调用bufferevent_write写入数据时，Libevent才会把监听可写事件的那个event注册到event_base中。当Libevent把数据都写入到fd的缓冲区后，Libevent又会把这个event从event_base中删除。比较烦琐。
 
-bufferevent_writecb函数不仅仅要处理上面说到的那个问题，还要处理另外一个坑爹的问题。那就是：判断socket fd是不是已经连接上服务器了。这是因为这个socket fd是非阻塞的，所以它调用connect时，可能还没连接上就返回了。对于非阻塞socket fd，一般是通过判断这个socket是否可写，从而得知这个socket是否已经连接上服务器。如果可写，那么它就已经成功连接上服务器了。这个问题，这里先提一下，[后面](http://blog.csdn.net/luotuo44/article/details/39344743#t8)会详细讲。
+bufferevent_writecb函数不仅仅要处理上面说到的那个问题，还要处理另外一个坑爹的问题。那就是：判断socket fd是不是已经连接上服务器了。这是因为这个socket fd是非阻塞的，所以它调用connect时，可能还没连接上就返回了。对于非阻塞socket fd，一般是通过判断这个socket是否可写，从而得知这个socket是否已经连接上服务器。如果可写，那么它就已经成功连接上服务器了。这个问题，这里先提一下，[后面](#bufferevent-socket-connect)会详细讲。
 
 同前面的监听可读一样，Libevent是在bufferevent_socket_new函数设置可写的回调函数，为bufferevent_writecb。
 
@@ -9506,7 +9526,7 @@ bufferevent_writecb(evutil_socket_t fd, short event, void *arg)
 
 现在来看一下，把监听写事件的event从event_base的插入队列中删除后，如果下次用户有数据要写的时候，怎么把这个event添加到event_base的插入队列。
 
-用户一般是通过bufferevent_write函数把数据写入到evbuffer(写入evbuffer后，接着就会被写入socket，所以调用bufferevent_write就相当于把数据写入到socket。)。而这个bufferevent_write函数是直接调用evbuffer_add函数的。函数evbuffer_add没有调用什么可疑的函数，能够把监听可写的event添加到event_base中。唯一的可能就是那个回调函数。对就是evbuffer的回调函数。关于evbuffer的回调函数，可以参考[这里](http://blog.csdn.net/luotuo44/article/details/39325447#t6)。
+用户一般是通过bufferevent_write函数把数据写入到evbuffer（写入evbuffer后，接着就会被写入socket，所以调用bufferevent_write就相当于把数据写入到socket）。而这个bufferevent_write函数是直接调用evbuffer_add函数的。函数evbuffer_add没有调用什么可疑的函数，能够把监听可写的event添加到event_base中。唯一的可能就是那个回调函数。对就是evbuffer的回调函数。关于evbuffer的回调函数，可以参考[这里](#callback_struct)。
 
 ``` C
 //bufferevent.c文件  
@@ -9566,12 +9586,13 @@ bufferevent_socket_outbuf_cb(struct evbuffer *buf,
 }
 ```
 
-这个函数首先进行一些判断，满足条件后就会把这个监听写事件的event添加到event_base中。其中event_pending函数就是判断这个bufev->ev_write是否已经被event_base删除了。关于event_pending，可以参考[这里](http://blog.csdn.net/luotuo44/article/details/38739549#t1)。
+这个函数首先进行一些判断，满足条件后就会把这个监听写事件的event添加到event_base中。其中event_pending函数就是判断这个bufev->ev_write是否已经被event_base删除了。关于event_pending，可以参考[这里](#event_status)。
 
-对于bufferevent_write，初次使用该函数的读者可能会有疑问：调用该函数后，参数data指向的内存空间能不能马上释放，还是要等到Libevent把data指向的数据都写到socket 缓存区才能删除？其实，从[前一篇博文](http://blog.csdn.net/luotuo44/article/details/39290721#t2)可以看到，evbuffer_add是直接复制一份用户要发送的数据到evbuffer缓存区的。所以，**调用完bufferevent_write，就可以马上释放参数data指向的内存空间**。
+对于bufferevent_write，初次使用该函数的读者可能会有疑问：调用该函数后，参数data指向的内存空间能不能马上释放，还是要等到Libevent把data指向的数据都写到socket 缓存区才能删除？其实，从[《evbuffer结构与基本操作》](#buffer-op)可以看到，evbuffer_add是直接复制一份用户要发送的数据到evbuffer缓存区的。所以，**调用完bufferevent_write，就可以马上释放参数data指向的内存空间**。
 
-网上的关于Libevent的一些使用例子，包括我写的[《Libevent使用例子，从简单到复杂》](http://blog.csdn.net/luotuo44/article/details/39670221)，都是在主线程中调用bufferevent_write函数写入数据的。从上面的分析可以得知，是可以马上把监听可写事件的event添加到event_base中。如果是在次线程调用该函数写入数据呢？此时，主线程可能还睡眠在poll、epoll这类的多路IO复用函数上。这种情况下能不能及时唤醒主线程呢？其实是可以的，只要你的Libevent在一开始使用了线程功能。具体的分析过程可以参考[《evthread_notify_base通知主线程》](http://blog.csdn.net/luotuo44/article/details/38556059)。上面代码中的be_socket_add会调用event_add，而在次线程调用event_add就会调用evthread_notify_base通知主线程。
+网上的关于Libevent的一些使用例子，包括我写的[《Libevent使用例子，从简单到复杂》](http://blog.csdn.net/luotuo44/article/details/39670221)，都是在主线程中调用bufferevent_write函数写入数据的。从上面的分析可以得知，是可以马上把监听可写事件的event添加到event_base中。如果是在次线程调用该函数写入数据呢？此时，主线程可能还睡眠在poll、epoll这类的多路IO复用函数上。这种情况下能不能及时唤醒主线程呢？其实是可以的，只要你的Libevent在一开始使用了线程功能。具体的分析过程可以参考[《evthread_notify_base通知主线程》](#evthread-notify-base)。上面代码中的be_socket_add会调用event_add，而在次线程调用event_add就会调用evthread_notify_base通知主线程。
 
+<span id="bufferevent-socket-connect"/>
 ### bufferevent_socket_connect
 
 用户可以在调用bufferevent_socket_new函数时，传一个-1作为socket的文件描述符，然后调用bufferevent_socket_connect函数连接服务器，无需自己写代码调用connect函数连接服务器。
@@ -9658,7 +9679,7 @@ done:
 }
 ```
 
-这个函数比较多错误处理的代码，大致看一下就行了。有几个地方要注意，即使connect的时候被拒绝，或者已经连接上了，都会手动激活这个event。一个event即使没有加入event_base，也是可以手动激活的。具体原理参考[这里](http://blog.csdn.net/luotuo44/article/details/38739549#t2)。
+这个函数比较多错误处理的代码，大致看一下就行了。有几个地方要注意，即使connect的时候被拒绝，或者已经连接上了，都会手动激活这个event。一个event即使没有加入event_base，也是可以手动激活的。具体原理参考[这里](#manual-activate-event)。
 
 无论是手动激活event，或者监听到这个event可写了，都是会调用bufferevent_writecb函数。现在再次看一下该函数，只看connect部分。
 
