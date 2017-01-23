@@ -1,2 +1,16 @@
-# libevent-src-analysis
-libevent source code analysis
+# libevent源码分析
+
+作者博客地址：http://blog.csdn.net/luotuo44
+电子书制作：Kelvin Yin (yinkangxi#gmail.com)
+
+在学习libevent源代码的时候，从网上找到了luotuo44写的《libevent源码分析》系列博客，觉得写得很好，和我写文档的风格一致。我之前在学习Linux内核代码的时候，写过一些文章，风格大致如此。先分析数据结构，再画图分析流程和函数调用关系，然后分小节解析源代码。
+
+我用了三天左右的时间把作者的libevent源码分析专栏的相关博客文章看完，觉得很过瘾，收获很大。只是觉得在网上看文章没有看电子书方便，而作者本人无意去做电子书，我便自己动手整理了现在的这个文档。
+
+本文档的内容都是luotuo44所写，我只是个文字的搬运工，将文中网页链接改成文档内链接，修改部分连接词，有错别字的话也一并改了。
+
+因为写过类似的文章，所以知道luotuo44写作的不易，请大家尊重原创者的劳动，在转发和引用的时候，将作者（luotuo44）的博客地址写上。
+
+谢谢！
+
+文档使用Markdown写成，Markdown编辑器使用的是MarkdownPad 2和马克飞象，最后使用马克飞象转成PDF文档。
