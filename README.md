@@ -1,6 +1,7 @@
 # libevent 源码分析
 
 作者博客地址：http://blog.csdn.net/luotuo44
+
 电子书制作：Kelvin Yin (yinkangxi#gmail.com)
 
 在学习 libevent 源代码的时候，从网上找到了 luotuo44 写的《libevent 源码分析》系列博客，觉得写得很好，和我写文档的风格一致。我之前在学习 Linux 内核代码的时候，写过一些文章，风格大致如此。先分析数据结构，再画图分析流程和函数调用关系，然后分小节解析源代码。
